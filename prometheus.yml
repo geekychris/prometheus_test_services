@@ -1,0 +1,91 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # User Analytics Service (for local Docker Prometheus)
+  - job_name: 'user-analytics-service'
+    static_configs:
+      - targets: ['host.docker.internal:8081']
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 3s
+    honor_labels: true
+    
+    # Add service-specific labels
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        target_label: __tmp_name
+        replacement: '${1}'
+      - source_labels: [job]
+        target_label: service_name
+        replacement: '${1}'
+
+  # Commerce Analytics Service (for local Docker Prometheus)
+  - job_name: 'commerce-analytics-service'
+    static_configs:
+      - targets: ['host.docker.internal:8082']
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 3s
+    honor_labels: true
+    
+    # Add service-specific labels
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        target_label: __tmp_name
+        replacement: '${1}'
+      - source_labels: [job]
+        target_label: service_name
+        replacement: '${1}'
+
+  # Alternative localhost targets (for native Prometheus)
+  - job_name: 'user-analytics-localhost'
+    static_configs:
+      - targets: ['localhost:8081']
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 3s
+    honor_labels: true
+
+  - job_name: 'commerce-analytics-localhost'
+    static_configs:
+      - targets: ['localhost:8082']
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 3s
+    honor_labels: true
+
+  # Docker container targets (when running with docker-compose)
+  - job_name: 'user-analytics-docker'
+    static_configs:
+      - targets: ['user-analytics:8081']
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 3s
+    honor_labels: true
+
+  - job_name: 'commerce-analytics-docker'
+    static_configs:
+      - targets: ['commerce-analytics:8082']
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 3s
+    honor_labels: true
+
+  # Monitor Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 10s
+
+# Optional: Alertmanager configuration
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093

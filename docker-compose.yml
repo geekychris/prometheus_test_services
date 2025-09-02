@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  user-analytics:
+    build:
+      context: ./user-analytics-service
+      dockerfile: Dockerfile
+    container_name: user-analytics-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - APP_ENVIRONMENT=docker
+      - APP_INSTANCE=user-analytics-docker
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - metrics-network
+
+  commerce-analytics:
+    build:
+      context: ./commerce-analytics-service
+      dockerfile: Dockerfile
+    container_name: commerce-analytics-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - APP_ENVIRONMENT=docker
+      - APP_INSTANCE=commerce-analytics-docker
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - metrics-network
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    networks:
+      - metrics-network
+    depends_on:
+      - user-analytics
+      - commerce-analytics
+
+networks:
+  metrics-network:
+    driver: bridge

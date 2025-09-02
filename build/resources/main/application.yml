@@ -1,0 +1,50 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: micrometer-demo-app
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+        step: 10s
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.50, 0.95, 0.99
+    tags:
+      application: ${spring.application.name}
+      environment: development
+
+logging:
+  level:
+    com.example.micrometerapp: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Custom application properties
+app:
+  metrics:
+    simulation:
+      enabled: true
+      interval-seconds: 5
+      users:
+        min: 10
+        max: 100
+      orders:
+        min: 1
+        max: 50

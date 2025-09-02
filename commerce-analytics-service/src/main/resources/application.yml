@@ -1,0 +1,54 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: commerce-analytics-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        commerce.order.processing.duration: true
+        commerce.payment.processing.duration: true
+        commerce.inventory.check.duration: true
+        commerce.database.query.duration: true
+        commerce.endpoint.duration: true
+      percentiles:
+        http.server.requests: 0.5, 0.75, 0.9, 0.95, 0.99
+        commerce.order.processing.duration: 0.5, 0.75, 0.9, 0.95, 0.99
+        commerce.payment.processing.duration: 0.5, 0.75, 0.9, 0.95, 0.99
+
+app:
+  environment: development
+  version: 1.0.0
+  instance: commerce-analytics-local
+  metrics:
+    simulation:
+      enabled: true
+      interval-seconds: 5
+      orders:
+        min: 1
+        max: 4
+        
+logging:
+  level:
+    com.example.commerceanalytics: INFO
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
