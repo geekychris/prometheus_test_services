@@ -375,6 +375,163 @@ The included `docker-compose.yml` configures a complete stack:
 ./run-docker.sh
 ```
 
+## Running Prometheus with Services
+
+### Option 1: Full Stack with Docker Compose (Recommended)
+
+This is the easiest way to run the complete monitoring stack:
+
+```bash
+# Build and run everything (services + Prometheus)
+./docker-build.sh && ./run-docker.sh
+
+# Access services:
+# - User Analytics: http://localhost:8081
+# - Commerce Analytics: http://localhost:8082
+# - Prometheus UI: http://localhost:9090
+```
+
+### Option 2: Local Services + Dockerized Prometheus
+
+Run Spring services locally with Maven and Prometheus in Docker:
+
+```bash
+# 1. Start both Spring services locally
+./run-local.sh
+
+# 2. Run Prometheus in Docker (configured for localhost services)
+docker run -d \
+  --name prometheus \
+  -p 9090:9090 \
+  -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml \
+  prom/prometheus
+
+# 3. Verify services are accessible
+curl http://localhost:8081/actuator/health
+curl http://localhost:8082/actuator/health
+
+# 4. Access Prometheus UI
+open http://localhost:9090
+```
+
+### Option 3: Native Prometheus Installation
+
+If you have Prometheus installed locally:
+
+```bash
+# 1. Start both Spring services
+./run-local.sh
+
+# 2. Start Prometheus with our config
+prometheus --config.file=./prometheus.yml --storage.tsdb.path=./prometheus-data
+
+# 3. Access Prometheus UI
+open http://localhost:9090
+```
+
+## Testing the Setup
+
+### Comprehensive Health Check
+
+Use the provided test script to verify everything is working:
+
+```bash
+# Make script executable and run
+chmod +x test-metrics.sh
+./test-metrics.sh
+```
+
+### Manual Verification Steps
+
+1. **Check Service Health:**
+   ```bash
+   curl http://localhost:8081/actuator/health
+   curl http://localhost:8082/actuator/health
+   ```
+
+2. **Verify Metrics Endpoints:**
+   ```bash
+   # Check User Analytics metrics
+   curl http://localhost:8081/actuator/prometheus | grep "user_"
+   
+   # Check Commerce Analytics metrics
+   curl http://localhost:8082/actuator/prometheus | grep "commerce_"
+   ```
+
+3. **Test Prometheus Scraping:**
+   ```bash
+   # Check Prometheus targets status
+   curl http://localhost:9090/api/v1/targets
+   
+   # Query sample metrics
+   curl "http://localhost:9090/api/v1/query?query=user_engagement_total"
+   curl "http://localhost:9090/api/v1/query?query=commerce_revenue_total"
+   ```
+
+4. **Generate Test Data:**
+   ```bash
+   # Trigger metric generation
+   curl -X POST http://localhost:8081/api/simulate/all
+   curl -X POST http://localhost:8082/api/simulate/all
+   ```
+
+### Prometheus Web UI
+
+Once Prometheus is running, access the web interface at `http://localhost:9090`:
+
+- **Status > Targets**: View scraping target health
+- **Graph**: Execute PromQL queries
+- **Status > Configuration**: View current Prometheus config
+
+## Docker Troubleshooting
+
+### Common Issues
+
+1. **Port Conflicts:**
+   ```bash
+   # Check what's using the ports
+   lsof -i :8081 :8082 :9090
+   
+   # Stop conflicting containers
+   docker stop $(docker ps -q)
+   ```
+
+2. **Docker Network Issues:**
+   ```bash
+   # For macOS Docker Desktop, services should use host.docker.internal
+   # This is already configured in prometheus.yml
+   
+   # Test connectivity from Prometheus container
+   docker exec prometheus wget -qO- http://host.docker.internal:8081/actuator/health
+   ```
+
+3. **Volume Mount Issues:**
+   ```bash
+   # Ensure prometheus.yml exists and is readable
+   ls -la prometheus.yml
+   
+   # Check Docker volume mount
+   docker inspect prometheus | grep -A5 -B5 "prometheus.yml"
+   ```
+
+### Clean Reset
+
+To completely reset the environment:
+
+```bash
+# Stop all containers
+docker stop $(docker ps -aq) 2>/dev/null || true
+
+# Remove containers
+docker rm $(docker ps -aq) 2>/dev/null || true
+
+# Remove images (optional)
+docker rmi user-analytics-service commerce-analytics-service 2>/dev/null || true
+
+# Rebuild and restart
+./docker-build.sh && ./run-docker.sh
+```
+
 ## Troubleshooting
 
 ### Service Health Checks
