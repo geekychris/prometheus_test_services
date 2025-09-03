@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-analytics-config
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: user-analytics-service
+    app.kubernetes.io/component: analytics
+    app.kubernetes.io/part-of: analytics-platform
+data:
+  application.yml: |
+    server:
+      port: 8081
+
+    spring:
+      application:
+        name: user-analytics-service
+
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus
+      endpoint:
+        health:
+          show-details: always
+        metrics:
+          enabled: true
+        prometheus:
+          enabled: true
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+        distribution:
+          percentiles-histogram:
+            http.server.requests: true
+            user.request.duration: true
+            user.auth.duration: true
+            user.profile.load.duration: true
+            user.endpoint.duration: true
+          percentiles:
+            http.server.requests: 0.5, 0.75, 0.9, 0.95, 0.99
+            user.request.duration: 0.5, 0.75, 0.9, 0.95, 0.99
+            user.auth.duration: 0.5, 0.75, 0.9, 0.95, 0.99
+
+    app:
+      environment: kubernetes
+      version: 1.0.0
+      instance: ${HOSTNAME}
+      metrics:
+        simulation:
+          enabled: true
+          interval-seconds: 4
+          users:
+            min: 10
+            max: 150
+            
+    logging:
+      level:
+        com.example.useranalytics: INFO
+        org.springframework.web: INFO
+      pattern:
+        console: "%d{HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"

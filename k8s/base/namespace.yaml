@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: micrometer-analytics
+  labels:
+    name: micrometer-analytics
+    app.kubernetes.io/name: micrometer-analytics
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: analytics-platform

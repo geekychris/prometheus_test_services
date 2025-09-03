@@ -1,0 +1,61 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: user-analytics-service-monitor
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: user-analytics-service
+    app.kubernetes.io/component: analytics
+    app.kubernetes.io/part-of: analytics-platform
+    prometheus: analytics
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: user-analytics-service
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 5s
+    scrapeTimeout: 3s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_service_name]
+      targetLabel: service
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace
+  namespaceSelector:
+    matchNames:
+    - micrometer-analytics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: commerce-analytics-service-monitor
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: commerce-analytics-service
+    app.kubernetes.io/component: analytics
+    app.kubernetes.io/part-of: analytics-platform
+    prometheus: analytics
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: commerce-analytics-service
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 5s
+    scrapeTimeout: 3s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_service_name]
+      targetLabel: service
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace
+  namespaceSelector:
+    matchNames:
+    - micrometer-analytics

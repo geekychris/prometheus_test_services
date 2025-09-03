@@ -483,6 +483,41 @@ Once Prometheus is running, access the web interface at `http://localhost:9090`:
 - **Graph**: Execute PromQL queries
 - **Status > Configuration**: View current Prometheus config
 
+## Kubernetes Deployment
+
+### Quick Kubernetes Setup
+
+```bash
+# Deploy to Kubernetes (includes building Docker images)
+cd k8s
+./scripts/deploy-all.sh
+
+# Test the deployment
+./scripts/test-deployment.sh
+
+# Access Prometheus via NodePort
+open http://localhost:30090
+
+# Or use port-forwarding
+kubectl port-forward -n micrometer-analytics svc/prometheus 9090:9090
+```
+
+### Kubernetes Cleanup
+
+```bash
+# Complete uninstall (Kubernetes + Docker images)
+cd k8s
+./scripts/complete-uninstall.sh
+
+# Kubernetes-only cleanup (keep Docker images)
+./scripts/cleanup.sh
+
+# Docker images only
+./scripts/purge-docker-images.sh
+```
+
+See the [Kubernetes README](k8s/README.md) for detailed deployment instructions, replica set configuration, and troubleshooting.
+
 ## Docker Troubleshooting
 
 ### Common Issues
@@ -516,7 +551,7 @@ Once Prometheus is running, access the web interface at `http://localhost:9090`:
 
 ### Clean Reset
 
-To completely reset the environment:
+To completely reset the Docker environment:
 
 ```bash
 # Stop all containers

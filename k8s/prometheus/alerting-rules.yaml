@@ -1,0 +1,426 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerting-rules
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: analytics-platform
+data:
+  alerting_rules.yml: |
+    groups:
+    
+    # ===========================================
+    # Infrastructure Alerts
+    # ===========================================
+    
+    - name: infrastructure_alerts
+      rules:
+      
+      - alert: ServiceDown
+        expr: up{job=~".*analytics.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "{{ $labels.job }} service is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute. Instance: {{ $labels.instance }}"
+          runbook_url: "https://runbooks.company.com/service-down"
+      
+      - alert: HighMemoryUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High memory usage on {{ $labels.service }}"
+          description: "JVM heap memory usage is {{ $value | humanizePercentage }} on {{ $labels.service }}"
+          runbook_url: "https://runbooks.company.com/high-memory"
+      
+      - alert: HighCPUUsage
+        expr: process_cpu_usage > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High CPU usage on {{ $labels.service }}"
+          description: "CPU usage is {{ $value | humanizePercentage }} on {{ $labels.service }}"
+          runbook_url: "https://runbooks.company.com/high-cpu"
+      
+      - alert: PodRestartingFrequently
+        expr: increase(kube_pod_container_status_restarts_total[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Pod {{ $labels.pod }} is restarting frequently"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last hour"
+      
+      - alert: PodNotReady
+        expr: kube_pod_status_ready{condition="false"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Pod {{ $labels.pod }} not ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has been not ready for more than 5 minutes"
+
+    # ===========================================
+    # Application Performance Alerts
+    # ===========================================
+    
+    - name: application_performance_alerts
+      rules:
+      
+      - alert: HighErrorRate
+        expr: platform:error_rate > 5
+        for: 2m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High error rate detected"
+          description: "Platform error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+          runbook_url: "https://runbooks.company.com/high-error-rate"
+      
+      - alert: CriticalErrorRate
+        expr: platform:error_rate > 15
+        for: 1m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Platform error rate is {{ $value | humanizePercentage }} (threshold: 15%)"
+          runbook_url: "https://runbooks.company.com/critical-error-rate"
+      
+      - alert: HighResponseTime
+        expr: platform:response_time:p95 > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High response time on {{ $labels.service }}"
+          description: "95th percentile response time is {{ $value }}s on {{ $labels.service }} (threshold: 2s)"
+          runbook_url: "https://runbooks.company.com/high-latency"
+      
+      - alert: UserServiceLatency
+        expr: user:request_duration:p95 > 1.5
+        for: 3m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High latency in User Analytics Service"
+          description: "User service 95th percentile latency is {{ $value }}s (threshold: 1.5s)"
+          runbook_url: "https://runbooks.company.com/user-service-latency"
+      
+      - alert: CommerceServiceLatency
+        expr: commerce:order_processing_duration:p95 > 3
+        for: 3m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High order processing latency in Commerce Service"
+          description: "Commerce order processing 95th percentile latency is {{ $value }}s (threshold: 3s)"
+          runbook_url: "https://runbooks.company.com/commerce-service-latency"
+
+    # ===========================================
+    # Business Logic Alerts
+    # ===========================================
+    
+    - name: business_logic_alerts
+      rules:
+      
+      - alert: LowUserRegistrationRate
+        expr: user:registrations:rate5m < 0.01
+        for: 10m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "User registration rate is low"
+          description: "User registration rate is {{ $value | humanize }} per second (threshold: 0.01/s). This may indicate a problem with the registration flow."
+          runbook_url: "https://runbooks.company.com/low-registration-rate"
+      
+      - alert: HighUserLoginFailureRate
+        expr: user:logins:failure_rate > 20
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "High user login failure rate"
+          description: "User login failure rate is {{ $value | humanizePercentage }} (threshold: 20%). This may indicate authentication issues."
+          runbook_url: "https://runbooks.company.com/high-login-failure"
+      
+      - alert: CriticalUserLoginFailureRate
+        expr: user:logins:failure_rate > 50
+        for: 2m
+        labels:
+          severity: critical
+          category: business
+        annotations:
+          summary: "Critical user login failure rate"
+          description: "User login failure rate is {{ $value | humanizePercentage }} (threshold: 50%). Authentication system may be down."
+          runbook_url: "https://runbooks.company.com/critical-login-failure"
+      
+      - alert: HighPaymentFailureRate
+        expr: commerce:payments:failure_rate > 15
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate is {{ $value | humanizePercentage }} (threshold: 15%). This may indicate payment processor issues."
+          runbook_url: "https://runbooks.company.com/high-payment-failure"
+      
+      - alert: CriticalPaymentFailureRate
+        expr: commerce:payments:failure_rate > 30
+        for: 2m
+        labels:
+          severity: critical
+          category: business
+        annotations:
+          summary: "Critical payment failure rate"
+          description: "Payment failure rate is {{ $value | humanizePercentage }} (threshold: 30%). Payment system may be down."
+          runbook_url: "https://runbooks.company.com/critical-payment-failure"
+      
+      - alert: HighCartAbandonmentRate
+        expr: commerce:cart_abandonment_rate > 70
+        for: 15m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "High cart abandonment rate"
+          description: "Cart abandonment rate is {{ $value | humanizePercentage }} (threshold: 70%). This may indicate checkout issues."
+          runbook_url: "https://runbooks.company.com/high-cart-abandonment"
+      
+      - alert: LowOrderRate
+        expr: commerce:orders:rate5m < 0.005
+        for: 10m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Low order rate detected"
+          description: "Order rate is {{ $value | humanize }} per second (threshold: 0.005/s). This may indicate a problem with the ordering system."
+          runbook_url: "https://runbooks.company.com/low-order-rate"
+      
+      - alert: InventoryLow
+        expr: commerce:inventory:min_levels < 100
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Low inventory levels detected"
+          description: "Minimum inventory level is {{ $value }} units (threshold: 100). Inventory may need restocking."
+          runbook_url: "https://runbooks.company.com/low-inventory"
+      
+      - alert: InventoryCritical
+        expr: commerce:inventory:min_levels < 50
+        for: 2m
+        labels:
+          severity: critical
+          category: business
+        annotations:
+          summary: "Critical inventory levels detected"
+          description: "Minimum inventory level is {{ $value }} units (threshold: 50). Immediate restocking required."
+          runbook_url: "https://runbooks.company.com/critical-inventory"
+
+    # ===========================================
+    # Database Performance Alerts
+    # ===========================================
+    
+    - name: database_alerts
+      rules:
+      
+      - alert: HighDatabaseQueryLatency
+        expr: commerce:database_query_duration:p95 > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High database query latency"
+          description: "95th percentile database query latency is {{ $value }}s (threshold: 0.5s)"
+          runbook_url: "https://runbooks.company.com/high-db-latency"
+      
+      - alert: HighDatabaseConnections
+        expr: commerce:database_connections:avg > 40
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High database connection count"
+          description: "Average database connections is {{ $value }} (threshold: 40). Connection pool may be exhausted."
+          runbook_url: "https://runbooks.company.com/high-db-connections"
+
+    # ===========================================
+    # SLA/SLO Monitoring Alerts
+    # ===========================================
+    
+    - name: sla_alerts
+      rules:
+      
+      - alert: UserServiceAvailabilitySLA
+        expr: sli:availability:user_service < 99.5
+        for: 5m
+        labels:
+          severity: warning
+          category: sla
+        annotations:
+          summary: "User service availability below SLA"
+          description: "User service availability is {{ $value | humanizePercentage }} (SLA: 99.5%)"
+          runbook_url: "https://runbooks.company.com/user-service-sla"
+      
+      - alert: CommerceServiceAvailabilitySLA
+        expr: sli:availability:commerce_service < 99.5
+        for: 5m
+        labels:
+          severity: warning
+          category: sla
+        annotations:
+          summary: "Commerce service availability below SLA"
+          description: "Commerce service availability is {{ $value | humanizePercentage }} (SLA: 99.5%)"
+          runbook_url: "https://runbooks.company.com/commerce-service-sla"
+      
+      - alert: UserServiceLatencySLA
+        expr: sli:latency:user_service:p95 > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: sla
+        annotations:
+          summary: "User service latency above SLA"
+          description: "User service 95th percentile latency is {{ $value }}s (SLA: 1s)"
+          runbook_url: "https://runbooks.company.com/user-service-latency-sla"
+      
+      - alert: CommerceServiceLatencySLA
+        expr: sli:latency:commerce_service:p95 > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: sla
+        annotations:
+          summary: "Commerce service latency above SLA"
+          description: "Commerce service 95th percentile latency is {{ $value }}s (SLA: 2s)"
+          runbook_url: "https://runbooks.company.com/commerce-service-latency-sla"
+      
+      - alert: UserLoginSuccessRateSLA
+        expr: sli:user_login_success_rate < 95
+        for: 5m
+        labels:
+          severity: warning
+          category: sla
+        annotations:
+          summary: "User login success rate below SLA"
+          description: "User login success rate is {{ $value | humanizePercentage }} (SLA: 95%)"
+          runbook_url: "https://runbooks.company.com/login-success-sla"
+      
+      - alert: PaymentSuccessRateSLA
+        expr: sli:payment_success_rate < 98
+        for: 5m
+        labels:
+          severity: warning
+          category: sla
+        annotations:
+          summary: "Payment success rate below SLA"
+          description: "Payment success rate is {{ $value | humanizePercentage }} (SLA: 98%)"
+          runbook_url: "https://runbooks.company.com/payment-success-sla"
+
+    # ===========================================
+    # Growth and Anomaly Detection Alerts
+    # ===========================================
+    
+    - name: growth_anomaly_alerts
+      rules:
+      
+      - alert: UnusuallyHighTraffic
+        expr: platform:requests_by_service > 10 * avg_over_time(platform:requests_by_service[24h])
+        for: 2m
+        labels:
+          severity: warning
+          category: anomaly
+        annotations:
+          summary: "Unusually high traffic on {{ $labels.service }}"
+          description: "Current traffic on {{ $labels.service }} is {{ $value | humanize }} req/s, which is 10x the 24h average"
+          runbook_url: "https://runbooks.company.com/traffic-spike"
+      
+      - alert: UnusuallyLowTraffic
+        expr: platform:requests_by_service < 0.1 * avg_over_time(platform:requests_by_service[24h])
+        for: 10m
+        labels:
+          severity: warning
+          category: anomaly
+        annotations:
+          summary: "Unusually low traffic on {{ $labels.service }}"
+          description: "Current traffic on {{ $labels.service }} is {{ $value | humanize }} req/s, which is <10% of the 24h average"
+          runbook_url: "https://runbooks.company.com/traffic-drop"
+      
+      - alert: UserGrowthAnomaly
+        expr: abs(platform:user_growth_rate - avg_over_time(platform:user_growth_rate[7d])) > 3 * stddev_over_time(platform:user_growth_rate[7d])
+        for: 30m
+        labels:
+          severity: warning
+          category: anomaly
+        annotations:
+          summary: "Unusual user growth rate"
+          description: "User growth rate is {{ $value | humanize }} registrations/hour, which is significantly different from the 7-day average"
+          runbook_url: "https://runbooks.company.com/user-growth-anomaly"
+      
+      - alert: RevenueGrowthAnomaly
+        expr: abs(platform:revenue_growth_rate - avg_over_time(platform:revenue_growth_rate[7d])) > 3 * stddev_over_time(platform:revenue_growth_rate[7d])
+        for: 30m
+        labels:
+          severity: warning
+          category: anomaly
+        annotations:
+          summary: "Unusual revenue growth rate"
+          description: "Revenue growth rate is ${{ $value | humanize }}/hour, which is significantly different from the 7-day average"
+          runbook_url: "https://runbooks.company.com/revenue-anomaly"
+
+    # ===========================================
+    # Regional Performance Alerts
+    # ===========================================
+    
+    - name: regional_alerts
+      rules:
+      
+      - alert: RegionalPerformanceImbalance
+        expr: |
+          (
+            max(platform:regional_performance) by (region) - 
+            min(platform:regional_performance) by (region)
+          ) / avg(platform:regional_performance) by (region) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          category: regional
+        annotations:
+          summary: "Regional performance imbalance detected"
+          description: "There is a significant performance imbalance between regions. Max/min difference is {{ $value | humanizePercentage }} of average."
+          runbook_url: "https://runbooks.company.com/regional-imbalance"
+      
+      - alert: RegionalServiceDegradation
+        expr: platform:regional_performance < 0.5 * avg_over_time(platform:regional_performance[1h])
+        for: 5m
+        labels:
+          severity: warning
+          category: regional
+        annotations:
+          summary: "Regional service degradation in {{ $labels.region }}"
+          description: "Traffic in {{ $labels.region }} is {{ $value | humanize }} req/s, which is <50% of the 1h average"
+          runbook_url: "https://runbooks.company.com/regional-degradation"

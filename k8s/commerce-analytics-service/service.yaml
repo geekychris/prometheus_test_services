@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: commerce-analytics-service
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: commerce-analytics-service
+    app.kubernetes.io/component: analytics
+    app.kubernetes.io/part-of: analytics-platform
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "8082"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8082
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: commerce-analytics-service

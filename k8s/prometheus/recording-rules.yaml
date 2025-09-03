@@ -1,0 +1,339 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-recording-rules
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: analytics-platform
+data:
+  recording_rules.yml: |
+    groups:
+    
+    # ===========================================
+    # User Analytics Service Recording Rules
+    # ===========================================
+    
+    - name: user_analytics_rates
+      interval: 15s
+      rules:
+      
+      # User Registration Metrics
+      - record: user:registrations:rate5m
+        expr: rate(user_registrations_total[5m])
+      
+      - record: user:registrations:rate1h
+        expr: rate(user_registrations_total[1h])
+      
+      - record: user:registrations:rate_by_source
+        expr: sum(rate(user_registrations_total[5m])) by (source, service)
+      
+      - record: user:registrations:rate_by_type
+        expr: sum(rate(user_registrations_total[5m])) by (user_type, service)
+        
+      # User Login Metrics
+      - record: user:logins:rate5m
+        expr: rate(user_logins_total[5m])
+      
+      - record: user:logins:success_rate
+        expr: |
+          rate(user_logins_total{success="true"}[5m]) / 
+          rate(user_logins_total[5m]) * 100
+      
+      - record: user:logins:failure_rate
+        expr: |
+          rate(user_logins_total{success="false"}[5m]) / 
+          rate(user_logins_total[5m]) * 100
+      
+      - record: user:logins:rate_by_auth_method
+        expr: sum(rate(user_logins_total[5m])) by (auth_method, service)
+        
+      - record: user:logins:rate_by_device
+        expr: sum(rate(user_logins_total[5m])) by (device, service)
+      
+      # User Session Metrics  
+      - record: user:sessions:rate5m
+        expr: rate(user_sessions_total[5m])
+      
+      - record: user:sessions:avg_duration
+        expr: |
+          rate(user_session_duration_sum[5m]) /
+          rate(user_session_duration_count[5m])
+      
+      # User Engagement Metrics
+      - record: user:engagement:rate5m
+        expr: rate(user_engagement_total[5m])
+        
+      # User Regional Activity
+      - record: user:regional_activity:rate5m
+        expr: sum(rate(user_requests_by_region[5m])) by (region, service)
+      
+      # User Request Performance
+      - record: user:request_duration:p50
+        expr: histogram_quantile(0.50, rate(user_request_duration_seconds_bucket[5m]))
+      
+      - record: user:request_duration:p95
+        expr: histogram_quantile(0.95, rate(user_request_duration_seconds_bucket[5m]))
+      
+      - record: user:request_duration:p99
+        expr: histogram_quantile(0.99, rate(user_request_duration_seconds_bucket[5m]))
+      
+      - record: user:auth_duration:p95
+        expr: histogram_quantile(0.95, rate(user_auth_duration_seconds_bucket[5m]))
+      
+      - record: user:endpoint_duration:p95
+        expr: histogram_quantile(0.95, sum(rate(user_endpoint_duration_seconds_bucket[5m])) by (endpoint, le))
+
+    - name: user_analytics_aggregates
+      interval: 30s
+      rules:
+      
+      # User Activity Aggregations
+      - record: user:active_users:avg
+        expr: avg(user_active_count) by (service)
+      
+      - record: user:active_users:max
+        expr: max(user_active_count) by (service)
+      
+      - record: user:online_users:avg
+        expr: avg(user_online_count) by (service)
+      
+      - record: user:cache_efficiency
+        expr: user_cache_size / user_active_count * 100
+        
+      # User Activity Score Distribution
+      - record: user:activity_score:p50
+        expr: histogram_quantile(0.50, rate(user_activity_score_bucket[5m]))
+      
+      - record: user:activity_score:p95
+        expr: histogram_quantile(0.95, rate(user_activity_score_bucket[5m]))
+
+    # ===========================================
+    # Commerce Analytics Service Recording Rules
+    # ===========================================
+    
+    - name: commerce_analytics_rates
+      interval: 15s
+      rules:
+      
+      # Order Processing Metrics
+      - record: commerce:orders:rate5m
+        expr: rate(commerce_orders_total[5m])
+      
+      - record: commerce:orders:rate1h
+        expr: rate(commerce_orders_total[1h])
+      
+      - record: commerce:orders:rate_by_type
+        expr: sum(rate(commerce_orders_total[5m])) by (order_type, service)
+      
+      - record: commerce:orders:rate_by_payment_method
+        expr: sum(rate(commerce_orders_total[5m])) by (payment_method, service)
+      
+      - record: commerce:orders:rate_by_fulfillment
+        expr: sum(rate(commerce_orders_total[5m])) by (fulfillment_type, service)
+      
+      # Payment Processing Metrics
+      - record: commerce:payments:rate5m
+        expr: rate(commerce_payments_total[5m])
+      
+      - record: commerce:payments:success_rate
+        expr: |
+          rate(commerce_payments_total{status="success"}[5m]) / 
+          rate(commerce_payments_total[5m]) * 100
+      
+      - record: commerce:payments:failure_rate
+        expr: |
+          rate(commerce_payments_total{status="failed"}[5m]) / 
+          rate(commerce_payments_total[5m]) * 100
+      
+      - record: commerce:payments:rate_by_method
+        expr: sum(rate(commerce_payments_total[5m])) by (payment_method, service)
+      
+      - record: commerce:payments:rate_by_currency
+        expr: sum(rate(commerce_payments_total[5m])) by (currency, service)
+      
+      # Product Activity Metrics
+      - record: commerce:product_views:rate5m
+        expr: rate(commerce_products_views_total[5m])
+      
+      - record: commerce:product_views:rate_by_category
+        expr: sum(rate(commerce_products_views_total[5m])) by (category, service)
+      
+      - record: commerce:product_views:rate_by_device
+        expr: sum(rate(commerce_products_views_total[5m])) by (device, service)
+      
+      # Cart Activity Metrics
+      - record: commerce:cart_actions:rate5m
+        expr: rate(commerce_cart_actions_total[5m])
+      
+      - record: commerce:cart_actions:rate_by_action
+        expr: sum(rate(commerce_cart_actions_total[5m])) by (action, service)
+      
+      - record: commerce:cart_abandonment_rate
+        expr: |
+          rate(commerce_cart_actions_total{action="abandon"}[5m]) / 
+          rate(commerce_cart_actions_total{action="add_item"}[5m]) * 100
+      
+      # Regional Commerce Activity
+      - record: commerce:regional_activity:rate5m
+        expr: sum(rate(commerce_requests_by_region[5m])) by (region, service)
+      
+      # Performance Metrics
+      - record: commerce:order_processing_duration:p50
+        expr: histogram_quantile(0.50, rate(commerce_order_processing_duration_seconds_bucket[5m]))
+      
+      - record: commerce:order_processing_duration:p95
+        expr: histogram_quantile(0.95, rate(commerce_order_processing_duration_seconds_bucket[5m]))
+      
+      - record: commerce:payment_processing_duration:p95
+        expr: histogram_quantile(0.95, rate(commerce_payment_processing_duration_seconds_bucket[5m]))
+      
+      - record: commerce:database_query_duration:p95
+        expr: histogram_quantile(0.95, rate(commerce_database_query_duration_seconds_bucket[5m]))
+
+    - name: commerce_analytics_aggregates
+      interval: 30s
+      rules:
+      
+      # Revenue Metrics (stored in cents, convert to dollars)
+      - record: commerce:revenue:rate_dollars_per_second
+        expr: rate(commerce_revenue_total[5m]) / 100
+      
+      - record: commerce:revenue:rate_dollars_per_minute
+        expr: rate(commerce_revenue_total[1m]) / 100 * 60
+      
+      # Order Value Analysis
+      - record: commerce:order_value:avg
+        expr: |
+          rate(commerce_order_value_sum[5m]) / 
+          rate(commerce_order_value_count[5m])
+      
+      - record: commerce:order_value:p50
+        expr: histogram_quantile(0.50, rate(commerce_order_value_bucket[5m]))
+      
+      - record: commerce:order_value:p95
+        expr: histogram_quantile(0.95, rate(commerce_order_value_bucket[5m]))
+      
+      # Shipping Cost Analysis
+      - record: commerce:shipping_cost:avg
+        expr: |
+          rate(commerce_shipping_cost_sum[5m]) / 
+          rate(commerce_shipping_cost_count[5m])
+      
+      # Inventory Management
+      - record: commerce:inventory:avg_levels
+        expr: avg(commerce_inventory_levels) by (service)
+      
+      - record: commerce:inventory:min_levels
+        expr: min(commerce_inventory_levels) by (service)
+      
+      - record: commerce:active_orders:avg
+        expr: avg(commerce_orders_active) by (service)
+      
+      - record: commerce:active_orders:max
+        expr: max(commerce_orders_active) by (service)
+      
+      # Database Performance
+      - record: commerce:database_connections:avg
+        expr: avg(commerce_database_connections_active) by (service)
+      
+      # Product Rating Analysis
+      - record: commerce:product_rating:avg
+        expr: |
+          rate(commerce_product_rating_sum[5m]) / 
+          rate(commerce_product_rating_count[5m])
+
+    # ===========================================
+    # Cross-Service Analytics Recording Rules
+    # ===========================================
+    
+    - name: platform_analytics_rates
+      interval: 30s
+      rules:
+      
+      # Combined Platform Metrics
+      - record: platform:total_requests:rate5m
+        expr: |
+          sum(rate(http_server_requests_total[5m])) by (service) +
+          sum(rate(user_registrations_total[5m])) by (service) +
+          sum(rate(commerce_orders_total[5m])) by (service)
+      
+      - record: platform:error_rate
+        expr: |
+          sum(rate(http_server_requests_total{status=~"5.."}[5m])) /
+          sum(rate(http_server_requests_total[5m])) * 100
+      
+      - record: platform:response_time:p95
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_server_requests_seconds_bucket[5m])) by (service, le)
+          )
+      
+      # Service Comparison Metrics
+      - record: platform:requests_by_service
+        expr: sum(rate(http_server_requests_total[5m])) by (service)
+      
+      - record: platform:memory_usage_by_service
+        expr: sum(jvm_memory_used_bytes{area="heap"}) by (service)
+      
+      - record: platform:cpu_usage_by_service
+        expr: sum(process_cpu_usage) by (service)
+      
+      # Business KPIs
+      - record: platform:user_growth_rate
+        expr: increase(user_registrations_total[1h])
+      
+      - record: platform:order_growth_rate
+        expr: increase(commerce_orders_total[1h])
+      
+      - record: platform:revenue_growth_rate
+        expr: increase(commerce_revenue_total[1h]) / 100
+      
+      # Regional Performance Comparison
+      - record: platform:regional_performance
+        expr: |
+          sum(rate(user_requests_by_region[5m])) by (region) +
+          sum(rate(commerce_requests_by_region[5m])) by (region)
+
+    - name: platform_sla_metrics
+      interval: 60s
+      rules:
+      
+      # Service Level Indicators (SLIs)
+      - record: sli:availability:user_service
+        expr: |
+          (
+            sum(rate(http_server_requests_total{service="user-analytics"}[5m])) -
+            sum(rate(http_server_requests_total{service="user-analytics",status=~"5.."}[5m]))
+          ) / sum(rate(http_server_requests_total{service="user-analytics"}[5m])) * 100
+      
+      - record: sli:availability:commerce_service
+        expr: |
+          (
+            sum(rate(http_server_requests_total{service="commerce-analytics"}[5m])) -
+            sum(rate(http_server_requests_total{service="commerce-analytics",status=~"5.."}[5m]))
+          ) / sum(rate(http_server_requests_total{service="commerce-analytics"}[5m])) * 100
+      
+      - record: sli:latency:user_service:p95
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_server_requests_seconds_bucket{service="user-analytics"}[5m])) by (le)
+          )
+      
+      - record: sli:latency:commerce_service:p95
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_server_requests_seconds_bucket{service="commerce-analytics"}[5m])) by (le)
+          )
+      
+      # Business SLIs
+      - record: sli:user_login_success_rate
+        expr: |
+          rate(user_logins_total{success="true"}[5m]) / 
+          rate(user_logins_total[5m]) * 100
+      
+      - record: sli:payment_success_rate
+        expr: |
+          rate(commerce_payments_total{status="success"}[5m]) / 
+          rate(commerce_payments_total[5m]) * 100

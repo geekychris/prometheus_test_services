@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: analytics-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: web
+    protocol: TCP
+    name: web
+  selector:
+    app.kubernetes.io/name: prometheus
+---
+# NodePort service for external access (optional - can be replaced with Ingress)
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-nodeport
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: analytics-platform
+spec:
+  type: NodePort
+  ports:
+  - port: 9090
+    targetPort: web
+    protocol: TCP
+    name: web
+    nodePort: 30090
+  selector:
+    app.kubernetes.io/name: prometheus

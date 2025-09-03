@@ -1,0 +1,64 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: micrometer-analytics-platform
+
+# Base namespace
+namespace: micrometer-analytics
+
+# Resources to deploy
+resources:
+  # Base resources
+  - base/namespace.yaml
+  
+  # Prometheus RBAC
+  - prometheus/rbac.yaml
+  
+  # ConfigMaps
+  - user-analytics-service/configmap.yaml
+  - commerce-analytics-service/configmap.yaml
+  - prometheus/configmap.yaml
+  - prometheus/recording-rules.yaml
+  - prometheus/alerting-rules.yaml
+  
+  # Services
+  - user-analytics-service/service.yaml
+  - commerce-analytics-service/service.yaml
+  - prometheus/service.yaml
+  
+  # Deployments
+  - user-analytics-service/deployment.yaml
+  - commerce-analytics-service/deployment.yaml
+  - prometheus/deployment.yaml
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/part-of: analytics-platform
+  app.kubernetes.io/managed-by: kustomize
+
+# Images that can be customized
+images:
+  - name: user-analytics-service
+    newTag: latest
+  - name: commerce-analytics-service
+    newTag: latest
+  - name: prom/prometheus
+    newTag: v2.45.0
+
+# Replica count patches (can be overridden)
+patchesStrategicMerge:
+  - |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: user-analytics-service
+    spec:
+      replicas: 2
+  - |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: commerce-analytics-service
+    spec:
+      replicas: 2
