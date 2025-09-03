@@ -41,15 +41,41 @@ if ! docker image inspect commerce-analytics-service:latest &> /dev/null; then
     ./docker-build.sh || { echo -e "${RED}Failed to build Docker images${NC}"; exit 1; }
 fi
 
+# Verify K8S_DIR exists and contains expected files
+if [ ! -d "$K8S_DIR" ]; then
+    echo -e "${RED}K8s directory not found: $K8S_DIR${NC}"
+    exit 1
+fi
+
+if [ ! -f "$K8S_DIR/base/namespace.yaml" ]; then
+    echo -e "${RED}Required file not found: $K8S_DIR/base/namespace.yaml${NC}"
+    echo -e "${YELLOW}Current working directory: $(pwd)${NC}"
+    echo -e "${YELLOW}K8S_DIR contents:${NC}"
+    ls -la "$K8S_DIR" || echo "Cannot list K8S_DIR"
+    exit 1
+fi
+
+echo -e "${YELLOW}Changing to K8s directory: $K8S_DIR${NC}"
 cd "$K8S_DIR"
+echo -e "${YELLOW}Current working directory: $(pwd)${NC}"
 
 # Function to apply manifests with error handling
 apply_manifest() {
-    local manifest_path=$1
-    local description=$2
+    local manifest_path="$1"
+    local description="$2"
+    
+    # Use absolute path to be safe
+    local full_path="$K8S_DIR/$manifest_path"
     
     echo -e "${BLUE}Deploying $description...${NC}"
-    if kubectl apply -f "$manifest_path"; then
+    echo -e "${YELLOW}Manifest path: $full_path${NC}"
+    
+    if [ ! -f "$full_path" ]; then
+        echo -e "${RED}✗ Manifest file not found: $full_path${NC}"
+        exit 1
+    fi
+    
+    if kubectl apply -f "$full_path"; then
         echo -e "${GREEN}✓ $description deployed successfully${NC}"
     else
         echo -e "${RED}✗ Failed to deploy $description${NC}"
