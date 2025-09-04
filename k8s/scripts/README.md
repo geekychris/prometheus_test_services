@@ -5,7 +5,7 @@ This directory contains scripts to deploy, manage, and troubleshoot the Micromet
 ## Available Scripts
 
 ### 🚀 **deploy.sh** (Recommended)
-Enhanced deployment script that can be run from any directory with auto-detection.
+Simplified deployment script that works on Linux and supports both kubectl and microk8s.
 
 ```bash
 # Basic usage (auto-detects project location)
@@ -26,10 +26,30 @@ Enhanced deployment script that can be run from any directory with auto-detectio
 
 **Features:**
 - ✅ Auto-detects project structure
-- ✅ Comprehensive prerequisite checking  
-- ✅ Works from any directory
+- ✅ Works with both `kubectl` and `microk8s.kubectl`
+- ✅ Linux-compatible (simplified from macOS-specific features)
 - ✅ Smart Docker image handling
-- ✅ Detailed error messages
+- ✅ Clear error messages
+
+### 📋 **deploy-simple.sh** (Alternative)
+Standalone simplified deployment script with explicit microk8s support.
+
+```bash
+# Basic usage
+./k8s/scripts/deploy-simple.sh
+
+# Skip Docker image building  
+./k8s/scripts/deploy-simple.sh --skip-build
+
+# Dry run
+./k8s/scripts/deploy-simple.sh --dry-run
+```
+
+**Features:**
+- ✅ Standalone implementation (doesn't call deploy-all.sh)
+- ✅ Explicit microk8s.kubectl detection and support
+- ✅ Simplified logic for better Linux compatibility
+- ✅ Direct manifest deployment without complex orchestration
 
 ### 📦 **deploy-all.sh** (Original)
 Original deployment script that must be run from the k8s directory.
@@ -128,6 +148,48 @@ Verifies that the deployment is working correctly.
 # Test the deployment
 ./k8s/scripts/test-deployment.sh
 ```
+
+### ⚙️ **update-rules.sh**
+Updates Prometheus recording and alerting rules with validation and reload.
+
+```bash
+# Update both recording and alerting rules
+./k8s/scripts/update-rules.sh
+
+# Update only recording rules
+./k8s/scripts/update-rules.sh -r k8s/prometheus/recording-rules.yaml
+
+# Validate rules without applying
+./k8s/scripts/update-rules.sh --validate-only
+
+# Update and wait for Prometheus reload
+./k8s/scripts/update-rules.sh --wait
+
+# Get help
+./k8s/scripts/update-rules.sh --help
+```
+
+**Features:**
+- ✅ Validates rule syntax with promtool (if available)
+- ✅ Updates ConfigMaps automatically
+- ✅ Triggers Prometheus reload
+- ✅ Verifies rules are loaded
+- ✅ Multiple reload methods (HTTP, SIGHUP, restart)
+
+### 📖 **example-add-rule.sh**
+Interactive example that demonstrates how to add a new Prometheus recording rule.
+
+```bash
+# Run the example to add a commerce error rate rule
+./k8s/scripts/example-add-rule.sh
+```
+
+**Features:**
+- 🎯 Shows complete workflow for adding a new rule
+- 🔄 Creates automatic backups
+- ✅ Validates and applies changes
+- 🧪 Provides testing instructions
+- 📋 Demonstrates best practices
 
 ## Quick Start Guide
 

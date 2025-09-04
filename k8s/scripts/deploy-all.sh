@@ -21,11 +21,25 @@ echo -e "${BLUE}Deploying Micrometer Analytics Services to Kubernetes...${NC}"
 echo "Project Root: $PROJECT_ROOT"
 echo "K8s Config Dir: $K8S_DIR"
 
-# Check if kubectl is available
-if ! command -v kubectl &> /dev/null; then
-    echo -e "${RED}kubectl could not be found. Please install kubectl first.${NC}"
+# Function to detect kubectl command
+detect_kubectl() {
+    if command -v microk8s.kubectl &> /dev/null; then
+        echo "microk8s.kubectl"
+    elif command -v kubectl &> /dev/null; then
+        echo "kubectl"
+    else
+        echo ""
+    fi
+}
+
+# Detect and set kubectl command
+KUBECTL_CMD=$(detect_kubectl)
+if [[ -z "$KUBECTL_CMD" ]]; then
+    echo -e "${RED}Neither 'kubectl' nor 'microk8s.kubectl' found. Please install kubectl or microk8s.${NC}"
     exit 1
 fi
+
+echo -e "${GREEN}✓ Using kubectl command: $KUBECTL_CMD${NC}"
 
 # Check if Docker images exist
 echo -e "${YELLOW}Checking if Docker images exist...${NC}"
@@ -75,7 +89,7 @@ apply_manifest() {
         exit 1
     fi
     
-    if kubectl apply -f "$full_path"; then
+    if $KUBECTL_CMD apply -f "$full_path"; then
         echo -e "${GREEN}✓ $description deployed successfully${NC}"
     else
         echo -e "${RED}✗ Failed to deploy $description${NC}"
@@ -108,7 +122,7 @@ apply_manifest "prometheus/deployment.yaml" "Prometheus Deployment"
 
 # Optionally deploy ServiceMonitors if Prometheus Operator is available
 echo -e "${YELLOW}Checking if Prometheus Operator CRDs are available...${NC}"
-if kubectl get crd servicemonitors.monitoring.coreos.com &> /dev/null; then
+if $KUBECTL_CMD get crd servicemonitors.monitoring.coreos.com &> /dev/null; then
     echo -e "${BLUE}Prometheus Operator detected. Deploying ServiceMonitors...${NC}"
     apply_manifest "prometheus/servicemonitors.yaml" "ServiceMonitors"
 else
@@ -120,25 +134,25 @@ echo -e "${GREEN}All services deployed successfully!${NC}"
 
 # Wait for deployments to be ready
 echo -e "${YELLOW}Waiting for deployments to be ready...${NC}"
-kubectl wait --for=condition=available --timeout=300s deployment/user-analytics-service -n micrometer-analytics
-kubectl wait --for=condition=available --timeout=300s deployment/commerce-analytics-service -n micrometer-analytics
-kubectl wait --for=condition=available --timeout=300s deployment/prometheus -n micrometer-analytics
+$KUBECTL_CMD wait --for=condition=available --timeout=300s deployment/user-analytics-service -n micrometer-analytics
+$KUBECTL_CMD wait --for=condition=available --timeout=300s deployment/commerce-analytics-service -n micrometer-analytics
+$KUBECTL_CMD wait --for=condition=available --timeout=300s deployment/prometheus -n micrometer-analytics
 
 echo -e "${GREEN}All deployments are ready!${NC}"
 
 # Display service information
 echo -e "${BLUE}Service Information:${NC}"
-kubectl get pods,services -n micrometer-analytics
+$KUBECTL_CMD get pods,services -n micrometer-analytics
 
 echo ""
 echo -e "${GREEN}Deployment completed successfully!${NC}"
 echo ""
 echo -e "${BLUE}Access the services:${NC}"
 echo "- Prometheus UI: http://localhost:30090 (via NodePort)"
-echo "- Or use port-forward for Prometheus: kubectl port-forward -n micrometer-analytics svc/prometheus 9090:9090"
-echo "- User Analytics Service: kubectl port-forward -n micrometer-analytics svc/user-analytics-service 8081:8081"
-echo "- Commerce Analytics Service: kubectl port-forward -n micrometer-analytics svc/commerce-analytics-service 8082:8082"
+echo "- Or use port-forward for Prometheus: $KUBECTL_CMD port-forward -n micrometer-analytics svc/prometheus 9090:9090"
+echo "- User Analytics Service: $KUBECTL_CMD port-forward -n micrometer-analytics svc/user-analytics-service 8081:8081"
+echo "- Commerce Analytics Service: $KUBECTL_CMD port-forward -n micrometer-analytics svc/commerce-analytics-service 8082:8082"
 echo ""
 echo -e "${YELLOW}To scale the services (useful for testing replica sets):${NC}"
-echo "kubectl scale deployment user-analytics-service --replicas=3 -n micrometer-analytics"
-echo "kubectl scale deployment commerce-analytics-service --replicas=3 -n micrometer-analytics"
+echo "$KUBECTL_CMD scale deployment user-analytics-service --replicas=3 -n micrometer-analytics"
+echo "$KUBECTL_CMD scale deployment commerce-analytics-service --replicas=3 -n micrometer-analytics"

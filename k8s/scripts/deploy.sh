@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Enhanced Deploy Script for Micrometer Analytics Services
-# This script can be run from any directory and will auto-detect the project structure
+# Simplified Kubernetes Deploy Script for Micrometer Analytics Services
+# Works on Linux and supports both kubectl and microk8s kubectl
 
 set -e
 
@@ -12,6 +12,17 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Function to detect kubectl command
+detect_kubectl() {
+    if command -v microk8s.kubectl &> /dev/null; then
+        echo "microk8s.kubectl"
+    elif command -v kubectl &> /dev/null; then
+        echo "kubectl"
+    else
+        echo ""
+    fi
+}
+
 # Function to print usage
 usage() {
     echo -e "${BLUE}Micrometer Analytics Kubernetes Deployment Script${NC}"
@@ -20,14 +31,13 @@ usage() {
     echo ""
     echo "Options:"
     echo "  -h, --help           Show this help message"
-    echo "  -p, --project-dir    Specify project root directory (auto-detected by default)"
+    echo "  -p, --project-dir    Specify project root directory"
     echo "  --skip-build         Skip Docker image building"
-    echo "  --dry-run           Show what would be deployed without actually deploying"
+    echo "  --dry-run           Show what would be deployed"
     echo ""
     echo "Examples:"
-    echo "  $0                                    # Deploy from auto-detected project"
-    echo "  $0 -p /path/to/micrometer_generator  # Deploy from specific project path"
-    echo "  $0 --skip-build                      # Deploy without building images"
+    echo "  $0                   # Deploy from current directory"
+    echo "  $0 --skip-build      # Deploy without building images"
     echo ""
 }
 
@@ -35,6 +45,8 @@ usage() {
 PROJECT_DIR=""
 SKIP_BUILD=false
 DRY_RUN=false
+KUBECTL_CMD=""
+NAMESPACE="micrometer-analytics"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -160,28 +172,34 @@ fi
 
 echo -e "${GREEN}✓ Project structure verified${NC}"
 
-# Check prerequisites
-echo -e "${YELLOW}Checking prerequisites...${NC}"
-
-if ! command -v kubectl &> /dev/null; then
-    echo -e "${RED}✗ kubectl not found. Please install kubectl first.${NC}"
+# Detect kubectl command
+KUBECTL_CMD=$(detect_kubectl)
+if [[ -z "$KUBECTL_CMD" ]]; then
+    echo -e "${RED}Error: Neither 'kubectl' nor 'microk8s.kubectl' found${NC}"
+    echo -e "${YELLOW}Please install kubectl or microk8s${NC}"
     exit 1
 fi
-echo -e "${GREEN}✓ kubectl found${NC}"
 
-if ! command -v docker &> /dev/null; then
-    echo -e "${YELLOW}⚠ docker not found. Will skip image building if needed.${NC}"
-    SKIP_BUILD=true
-else
-    echo -e "${GREEN}✓ docker found${NC}"
-fi
+echo -e "${GREEN}✓ Using kubectl command: $KUBECTL_CMD${NC}"
 
-# Check Kubernetes cluster connectivity
-if ! kubectl cluster-info &> /dev/null; then
-    echo -e "${RED}✗ Cannot connect to Kubernetes cluster. Please check your kubeconfig.${NC}"
+# Test kubectl connectivity
+echo -e "${YELLOW}Testing Kubernetes connection...${NC}"
+if ! $KUBECTL_CMD cluster-info &> /dev/null; then
+    echo -e "${RED}Cannot connect to Kubernetes cluster${NC}"
+    echo -e "${YELLOW}Please check your kubeconfig or microk8s status${NC}"
     exit 1
 fi
-echo -e "${GREEN}✓ Kubernetes cluster connection verified${NC}"
+echo -e "${GREEN}✓ Kubernetes connection verified${NC}"
+
+# Check Docker (optional)
+if [[ "$SKIP_BUILD" == false ]]; then
+    if command -v docker &> /dev/null; then
+        echo -e "${GREEN}✓ Docker found${NC}"
+    else
+        echo -e "${YELLOW}⚠ Docker not found, skipping image build${NC}"
+        SKIP_BUILD=true
+    fi
+fi
 
 echo ""
 
