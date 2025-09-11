@@ -21,16 +21,19 @@ resources:
   - prometheus/configmap.yaml
   - prometheus/recording-rules.yaml
   - prometheus/alerting-rules.yaml
+  - grafana/configmap.yaml
   
   # Services
   - user-analytics-service/service.yaml
   - commerce-analytics-service/service.yaml
   - prometheus/service.yaml
+  - grafana/service.yaml
   
   # Deployments
   - user-analytics-service/deployment.yaml
   - commerce-analytics-service/deployment.yaml
   - prometheus/deployment.yaml
+  - grafana/deployment.yaml
 
 # Common labels applied to all resources
 commonLabels:
@@ -45,20 +48,6 @@ images:
     newTag: latest
   - name: prom/prometheus
     newTag: v2.45.0
+  - name: grafana/grafana
+    newTag: 10.2.0
 
-# Replica count patches (can be overridden)
-patchesStrategicMerge:
-  - |-
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      name: user-analytics-service
-    spec:
-      replicas: 2
-  - |-
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      name: commerce-analytics-service
-    spec:
-      replicas: 2

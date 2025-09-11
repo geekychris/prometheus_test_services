@@ -84,6 +84,10 @@ spec:
         - name: config
           mountPath: /config
           readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: logs
+          mountPath: /logs
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
@@ -93,14 +97,6 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-        volumeMounts:
-        - name: config
-          mountPath: /config
-          readOnly: true
-        - name: tmp
-          mountPath: /tmp
-        - name: logs
-          mountPath: /logs
       volumes:
       - name: config
         configMap:

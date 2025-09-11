@@ -4,11 +4,17 @@ A Maven-based multi-service Spring Boot platform demonstrating comprehensive Mic
 
 ## Architecture
 
-This project consists of two specialized microservices:
+This project consists of two specialized microservices with a complete monitoring stack:
 
 1. **User Analytics Service** (Port 8081) - Focuses on user-related metrics
 2. **Commerce Analytics Service** (Port 8082) - Focuses on commerce and transaction metrics
+3. **Prometheus** (Port 9090) - Metrics collection and storage
+4. **Grafana** (Port 3000) - Metrics visualization and dashboards
 
+With both UI exposed for Prometheus and Grafana
+![prometheus.png](doc_images/prometheus.png)
+
+![grafana_1 .png](doc_images/grafana_1.png)
 ## Project Structure
 
 ```
@@ -78,9 +84,15 @@ This platform generates distinct sets of metrics from two specialized services t
 ./run-local.sh
 ```
 
-### 3. Run with Docker Compose (includes Prometheus)
+### 3. Run with Docker Compose (includes Prometheus + Grafana)
 ```bash
 ./run-docker.sh
+
+# Access services:
+# - User Analytics: http://localhost:8081
+# - Commerce Analytics: http://localhost:8082
+# - Prometheus: http://localhost:9090
+# - Grafana: http://localhost:3000 (admin/admin123)
 ```
 
 ## Service Details
@@ -203,6 +215,124 @@ docker run -d \
 ```
 
 Access Prometheus UI at: `http://localhost:9090`
+
+## Grafana Integration
+
+### Accessing Grafana
+
+Grafana is automatically configured with Prometheus as a data source and includes pre-built dashboards.
+
+**Access:** `http://localhost:3000`
+**Default Credentials:**
+- Username: `admin`
+- Password: `admin123`
+
+### Pre-configured Dashboards
+
+The project includes a comprehensive "Analytics Platform Overview" dashboard that displays:
+
+- **Request Rate by Service**: Shows HTTP request rates for both services
+- **User Activity Rate**: User registrations and login metrics
+- **Commerce Activity Rate**: Order and payment processing rates
+- **Active Users Gauge**: Real-time active user count
+- **User Request Duration**: 95th and 50th percentile request processing times
+- **Order Processing Duration**: Commerce service processing time metrics
+
+### Running Grafana
+
+#### Option 1: Docker Compose (Recommended)
+```bash
+# Run complete stack including Grafana
+./docker-build.sh && ./run-docker.sh
+
+# Access Grafana at: http://localhost:3000
+# Username: admin, Password: admin123
+```
+
+#### Option 2: Standalone Grafana with Docker
+```bash
+# Run Prometheus first
+docker run -d --name prometheus -p 9090:9090 \
+  -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+
+# Run Grafana with Prometheus connection
+docker run -d --name grafana -p 3000:3000 \
+  -e GF_SECURITY_ADMIN_USER=admin \
+  -e GF_SECURITY_ADMIN_PASSWORD=admin123 \
+  grafana/grafana:10.2.0
+```
+
+#### Option 3: Kubernetes Deployment
+```bash
+# Deploy to Kubernetes (includes Grafana)
+cd k8s
+kubectl apply -k .
+
+# Wait for pods to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana -n micrometer-analytics --timeout=120s
+
+# Access Grafana via NodePort (optimized for local access)
+open http://localhost:30300
+
+# Or use the access checker script
+./check-grafana-access.sh
+
+# Alternative: port-forwarding
+kubectl port-forward -n micrometer-analytics svc/grafana 3000:3000
+```
+
+### Custom Dashboard Creation
+
+To create custom dashboards:
+
+1. **Access Grafana**: Navigate to `http://localhost:3000`
+2. **Login**: Use admin/admin123
+3. **Create Dashboard**: Click "+" > "Dashboard"
+4. **Add Panel**: Click "Add panel"
+5. **Configure Query**: Use Prometheus queries (see examples below)
+6. **Save Dashboard**: Click save icon and provide name
+
+### Grafana Configuration
+
+The Grafana instance is pre-configured with:
+- **Prometheus Data Source**: `http://prometheus:9090`
+- **Dashboard Provisioning**: Automatic dashboard loading
+- **Authentication**: Admin user with password
+- **Plugins**: Pie chart panel plugin
+
+### Troubleshooting Grafana
+
+1. **Connection Issues:**
+   ```bash
+   # Check if Grafana can reach Prometheus
+   docker exec grafana wget -qO- http://prometheus:9090/api/v1/targets
+   ```
+
+2. **Dashboard Not Loading:**
+   ```bash
+   # Check dashboard files exist
+   ls -la grafana/dashboard-files/
+   
+   # Restart Grafana container
+   docker restart grafana
+   ```
+
+3. **Authentication Problems:**
+   ```bash
+   # Reset admin password (Docker Compose)
+   docker exec -it grafana grafana-cli admin reset-admin-password newpassword
+   ```
+
+4. **NodePort Access Issues (Kubernetes):**
+   ```bash
+   # Use the access checker script for comprehensive diagnostics
+   ./check-grafana-access.sh
+   
+   # Manual troubleshooting
+   kubectl get svc grafana-nodeport -n micrometer-analytics
+   kubectl get pods -n micrometer-analytics -l app.kubernetes.io/name=grafana
+   kubectl logs -n micrometer-analytics -l app.kubernetes.io/name=grafana
+   ```
 
 ## Example Prometheus Queries
 
@@ -364,6 +494,7 @@ The included `docker-compose.yml` configures a complete stack:
 - User Analytics Service on port 8081
 - Commerce Analytics Service on port 8082
 - Prometheus on port 9090 (with configured scraping)
+- Grafana on port 3000 (with pre-configured dashboards)
 
 ### Building and Running
 
@@ -495,11 +626,13 @@ cd k8s
 # Test the deployment
 ./scripts/test-deployment.sh
 
-# Access Prometheus via NodePort
-open http://localhost:30090
+# Access services via NodePort
+open http://localhost:30090  # Prometheus
+open http://localhost:30300  # Grafana (admin/admin123)
 
 # Or use port-forwarding
 kubectl port-forward -n micrometer-analytics svc/prometheus 9090:9090
+kubectl port-forward -n micrometer-analytics svc/grafana 3000:3000
 ```
 
 ### Kubernetes Cleanup

@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: visualization
+    app.kubernetes.io/part-of: analytics-platform
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: web
+    protocol: TCP
+    name: web
+  selector:
+    app.kubernetes.io/name: grafana
+---
+# NodePort service for external access - optimized for local development
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-nodeport
+  namespace: micrometer-analytics
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: visualization
+    app.kubernetes.io/part-of: analytics-platform
+  annotations:
+    # Ensure this service is accessible from localhost
+    service.kubernetes.io/local-access: "true"
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    targetPort: web
+    protocol: TCP
+    name: web
+    nodePort: 30300
+  selector:
+    app.kubernetes.io/name: grafana
+  # Ensure external traffic policy is set for local access
+  externalTrafficPolicy: Local

@@ -61,6 +61,30 @@ services:
       - user-analytics
       - commerce-analytics
 
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboard-files:/var/lib/grafana/dashboards
+    networks:
+      - metrics-network
+    depends_on:
+      - prometheus
+
 networks:
   metrics-network:
     driver: bridge
+
+volumes:
+  grafana-storage:
+    driver: local

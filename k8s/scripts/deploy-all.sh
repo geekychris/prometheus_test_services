@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Deploy Micrometer Analytics Services to Kubernetes
-# This script deploys the User Analytics Service, Commerce Analytics Service, and Prometheus
+# This script deploys the User Analytics Service, Commerce Analytics Service, Prometheus, and Grafana
 
 set -e
 
@@ -109,16 +109,19 @@ apply_manifest "commerce-analytics-service/configmap.yaml" "Commerce Analytics C
 apply_manifest "prometheus/configmap.yaml" "Prometheus ConfigMap"
 apply_manifest "prometheus/recording-rules.yaml" "Prometheus Recording Rules"
 apply_manifest "prometheus/alerting-rules.yaml" "Prometheus Alerting Rules"
+apply_manifest "grafana/configmap.yaml" "Grafana ConfigMaps"
 
 # Deploy Services
 apply_manifest "user-analytics-service/service.yaml" "User Analytics Service"
 apply_manifest "commerce-analytics-service/service.yaml" "Commerce Analytics Service"
 apply_manifest "prometheus/service.yaml" "Prometheus Service"
+apply_manifest "grafana/service.yaml" "Grafana Service"
 
 # Deploy Applications
 apply_manifest "user-analytics-service/deployment.yaml" "User Analytics Deployment"
 apply_manifest "commerce-analytics-service/deployment.yaml" "Commerce Analytics Deployment"
 apply_manifest "prometheus/deployment.yaml" "Prometheus Deployment"
+apply_manifest "grafana/deployment.yaml" "Grafana Deployment"
 
 # Optionally deploy ServiceMonitors if Prometheus Operator is available
 echo -e "${YELLOW}Checking if Prometheus Operator CRDs are available...${NC}"
@@ -137,6 +140,7 @@ echo -e "${YELLOW}Waiting for deployments to be ready...${NC}"
 $KUBECTL_CMD wait --for=condition=available --timeout=300s deployment/user-analytics-service -n micrometer-analytics
 $KUBECTL_CMD wait --for=condition=available --timeout=300s deployment/commerce-analytics-service -n micrometer-analytics
 $KUBECTL_CMD wait --for=condition=available --timeout=300s deployment/prometheus -n micrometer-analytics
+$KUBECTL_CMD wait --for=condition=available --timeout=300s deployment/grafana -n micrometer-analytics
 
 echo -e "${GREEN}All deployments are ready!${NC}"
 
@@ -148,10 +152,13 @@ echo ""
 echo -e "${GREEN}Deployment completed successfully!${NC}"
 echo ""
 echo -e "${BLUE}Access the services:${NC}"
+echo "- Grafana Dashboard: http://localhost:30300 (via NodePort) - admin/admin123"
 echo "- Prometheus UI: http://localhost:30090 (via NodePort)"
-echo "- Or use port-forward for Prometheus: $KUBECTL_CMD port-forward -n micrometer-analytics svc/prometheus 9090:9090"
-echo "- User Analytics Service: $KUBECTL_CMD port-forward -n micrometer-analytics svc/user-analytics-service 8081:8081"
-echo "- Commerce Analytics Service: $KUBECTL_CMD port-forward -n micrometer-analytics svc/commerce-analytics-service 8082:8082"
+echo "- Or use port-forward:"
+echo "  - Grafana: $KUBECTL_CMD port-forward -n micrometer-analytics svc/grafana 3000:3000"
+echo "  - Prometheus: $KUBECTL_CMD port-forward -n micrometer-analytics svc/prometheus 9090:9090"
+echo "  - User Analytics: $KUBECTL_CMD port-forward -n micrometer-analytics svc/user-analytics-service 8081:8081"
+echo "  - Commerce Analytics: $KUBECTL_CMD port-forward -n micrometer-analytics svc/commerce-analytics-service 8082:8082"
 echo ""
 echo -e "${YELLOW}To scale the services (useful for testing replica sets):${NC}"
 echo "$KUBECTL_CMD scale deployment user-analytics-service --replicas=3 -n micrometer-analytics"
