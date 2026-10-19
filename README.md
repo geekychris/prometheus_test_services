@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Prometheus Test Services logo" width="180">
+</p>
+
 # Micrometer Services - Multi-Service Analytics Platform
 
 A Maven-based multi-service Spring Boot platform demonstrating comprehensive Micrometer metrics integration with Prometheus for observability and monitoring.
